@@ -43,24 +43,43 @@
       button.secondary { background: #f6f8fa; color: #24292f; }
       button:disabled { opacity: 0.5; cursor: not-allowed; }
       #status { color: var(--muted); font-size: 0.85rem; min-height: 1.2em; }
+
+      /* 문서 이력 (FR-105) */
+      .history { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.4rem 0 1rem; }
+      .history.empty { color: var(--muted); font-size: 0.8rem; }
+      .history-item {
+        display: inline-flex; align-items: stretch;
+        border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+      }
+      .history-item.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+      .history-load {
+        background: #f6f8fa; color: #24292f; border: none; border-radius: 0;
+        font-size: 0.78rem; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .history-del {
+        background: #f6f8fa; color: var(--muted); border: none; border-left: 1px solid var(--border);
+        border-radius: 0; padding: 0.4rem 0.55rem;
+      }
+      .history-del:hover { background: #ffd7d5; color: #cf222e; }
+
       .block {
-        position: relative;
         border: 1px solid var(--border);
         border-radius: 8px;
         padding: 0.8rem 1rem;
         margin: 0.8rem 0;
       }
       .block-id {
-        position: absolute;
-        top: -0.7rem;
-        left: 0.8rem;
+        display: inline-block;
         background: var(--muted);
         color: #fff;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 0.7rem;
-        padding: 0.05rem 0.4rem;
+        padding: 0.1rem 0.45rem;
         border-radius: 4px;
+        margin-bottom: 0.5rem;
+        word-break: break-all;
       }
-      .block-content > :first-child { margin-top: 0.3rem; }
+      .block-content > :first-child { margin-top: 0.2rem; }
       .block-content pre {
         background: #f6f8fa;
         padding: 0.6rem;
@@ -93,8 +112,9 @@
   <body>
     <h1>md2htmlreview</h1>
     <p class="hint">
-      AI 에이전트의 plan markdown 을 붙여넣고 <b>변환</b> → 단락별로 의견·반박을 달고 →
-      <b>복사</b> 하면 원본 + 의견이 합쳐진 텍스트가 클립보드에 담깁니다.
+      AI 에이전트의 plan markdown 을 붙여넣고 <b>변환</b> → markdown 은 <b>heading 섹션</b>으로 나뉘어
+      각 섹션에 의견·반박을 답니다. 검수 상태는 <b>브라우저에 저장</b>되어 새로고침해도 유지되고,
+      여러 plan 을 이력에서 전환할 수 있습니다. <b>복사</b> 시 원본 + 섹션별 의견이 클립보드에 담깁니다.
     </p>
 
     <textarea id="input" placeholder="여기에 plan markdown 을 붙여넣으세요…"></textarea>
@@ -104,6 +124,8 @@
       <button id="copy" type="button" class="secondary" disabled>원본+의견 복사</button>
       <span id="status"></span>
     </div>
+
+    <div id="history"></div>
 
     <div id="output"></div>
 

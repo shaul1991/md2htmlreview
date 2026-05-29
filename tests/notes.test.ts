@@ -54,4 +54,21 @@ describe('NoteStore — 메모리 의견 저장소 (FR-006, D-3)', () => {
     store.clear();
     expect(store.get('p1')).toEqual([]);
   });
+
+  it('toJSON / loadFrom 라운드트립 + seq 복원 (영속용, FR-104)', () => {
+    store.add('s1', 'a');
+    const b = store.add('s1', 'b');
+    store.rebut('s1', b.id, 'c');
+    const json = store.toJSON();
+
+    const restored = new NoteStore();
+    restored.loadFrom(json);
+    expect(restored.get('s1').map((n) => n.text)).toEqual(['a', 'b', 'c']);
+
+    // seq 가 복원되어 새 add 의 id 가 기존과 충돌하지 않음
+    const added = restored.add('s1', 'd');
+    const ids = restored.get('s1').map((n) => n.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain(added.id);
+  });
 });

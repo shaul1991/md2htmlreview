@@ -51,11 +51,32 @@ export class NoteStore {
     return this.byBlock;
   }
 
-  /** 저장소 초기화 (재변환 시, FR-009). */
+  /** 저장소 초기화 (재변환 시). */
   clear(): void {
     this.byBlock.clear();
     this.blockOf.clear();
     this.seq = 0;
+  }
+
+  /** 영속용 직렬화 — 섹션 slug → Note[] 평면 객체 (FR-104). */
+  toJSON(): Record<string, Note[]> {
+    const out: Record<string, Note[]> = {};
+    for (const [blockId, notes] of this.byBlock) out[blockId] = notes.map((n) => ({ ...n }));
+    return out;
+  }
+
+  /** 직렬화 객체에서 복원. seq 를 기존 최대 id 너머로 맞춰 새 add 충돌 방지 (FR-104). */
+  loadFrom(data: Record<string, Note[]>): void {
+    this.clear();
+    let maxSeq = 0;
+    for (const [blockId, notes] of Object.entries(data)) {
+      for (const note of notes) {
+        this.push(blockId, { ...note });
+        const m = /^n(\d+)$/.exec(note.id);
+        if (m) maxSeq = Math.max(maxSeq, Number(m[1]));
+      }
+    }
+    this.seq = maxSeq;
   }
 
   private push(blockId: string, note: Note): Note {

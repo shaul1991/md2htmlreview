@@ -1,80 +1,80 @@
 import { describe, it, expect } from 'vitest';
-import { parseBlocks } from '../src/parse';
+import { parseSections, slugify } from '../src/parse';
 
-const SAMPLE = `# Title
+// 주 섹션 레벨 P=2 (## 가 2회) → ## 마다 분할, ### 는 접힘
+const FOLD = `# Doc Title
 
-Intro paragraph.
+intro para.
 
-- item 1
-- item 2
+## Section A
 
-\`\`\`js
-code();
-\`\`\`
+para a.
 
-> quote line`;
+### Sub A1
 
-describe('parseBlocks — 단락 분리 (FR-002, D-2)', () => {
-  it('헤더·문단·리스트·코드·인용 혼합을 단락으로 분리한다', () => {
-    const blocks = parseBlocks(SAMPLE);
-    expect(blocks.map((b) => b.type)).toEqual([
-      'heading',
-      'paragraph',
-      'bullet_list',
-      'fence',
-      'blockquote',
-    ]);
+deep content.
+
+## Section B
+
+para b.`;
+
+describe('parseSections — heading 섹션 분할 + 하위 heading 접기 (FR-101)', () => {
+  it('주 섹션 레벨(##)마다 끊고 ### 는 그 안에 접는다', () => {
+    const secs = parseSections(FOLD);
+    expect(secs.map((s) => s.id)).toEqual(['doc-title', 'section-a', 'section-b']);
+    expect(secs.map((s) => s.headingLevel)).toEqual([1, 2, 2]);
   });
 
-  it('등장 순서대로 순번 ID(p1,p2…)를 부여한다', () => {
-    const blocks = parseBlocks(SAMPLE);
-    expect(blocks.map((b) => b.id)).toEqual(['p1', 'p2', 'p3', 'p4', 'p5']);
+  it('접힌 하위 heading 본문이 부모 섹션 HTML 에 포함된다', () => {
+    const secs = parseSections(FOLD);
+    const a = secs.find((s) => s.id === 'section-a')!;
+    expect(a.html).toContain('Sub A1');
+    expect(a.html).toContain('<h3');
+    expect(a.html).toContain('deep content');
   });
 
-  it('각 블록의 sourceRange·rawMarkdown 을 보존한다 (D-2)', () => {
-    const blocks = parseBlocks(SAMPLE);
-    expect(blocks[0].rawMarkdown).toBe('# Title');
-    expect(blocks[0].sourceRange[0]).toBe(0);
-    expect(blocks[3].rawMarkdown).toContain('```js');
-    expect(blocks[3].rawMarkdown).toContain('code();');
-  });
-
-  it('헤더 블록은 사람이 읽기 좋은 HTML 로 변환된다 (FR-002)', () => {
-    const blocks = parseBlocks(SAMPLE);
-    expect(blocks[0].html).toContain('<h1>');
-    expect(blocks[0].html).toContain('Title');
+  it('단위 ID 는 그 단위 첫 heading 의 slug (FR-102)', () => {
+    const secs = parseSections(FOLD);
+    expect(secs[0].id).toBe('doc-title');
+    expect(secs[0].html).toContain('<h1');
   });
 });
 
-describe('parseBlocks — 빈/평문 입력 (FR-011)', () => {
-  it('빈 입력은 [] 를 반환한다', () => {
-    expect(parseBlocks('')).toEqual([]);
+describe('parseSections — intro / 평문 / 빈 입력 (FR-103/109)', () => {
+  it('선두 heading 없는 내용은 intro 단위', () => {
+    const secs = parseSections('plain intro line.\n\n## Only Section\n\nbody.');
+    expect(secs.map((s) => s.id)).toEqual(['intro', 'only-section']);
   });
 
-  it('공백만 있는 입력은 [] 를 반환한다', () => {
-    expect(parseBlocks('   \n  \n\t')).toEqual([]);
+  it('heading 이 전혀 없는 평문 → intro 단위 하나', () => {
+    const secs = parseSections('그냥 평문\n\n두 번째 줄.');
+    expect(secs).toHaveLength(1);
+    expect(secs[0].id).toBe('intro');
+    expect(secs[0].html).toContain('그냥 평문');
   });
 
-  it('마크다운 문법 없는 평문은 paragraph 단락으로 렌더된다', () => {
-    const blocks = parseBlocks('그냥 평문 한 줄입니다.');
-    expect(blocks).toHaveLength(1);
-    expect(blocks[0].type).toBe('paragraph');
-    expect(blocks[0].html).toContain('그냥 평문 한 줄입니다.');
+  it('빈/공백 입력 → []', () => {
+    expect(parseSections('')).toEqual([]);
+    expect(parseSections('   \n\t\n')).toEqual([]);
   });
 });
 
-describe('parseBlocks — raw HTML 무력화 (FR-010, D-1)', () => {
-  it('<script> 는 escape 되어 텍스트로 표시된다', () => {
-    const blocks = parseBlocks('Hello <script>alert(1)</script> world');
-    const html = blocks.map((b) => b.html).join('');
+describe('parseSections — slug 충돌 / 한글 / raw HTML (FR-102/108)', () => {
+  it('같은 heading 텍스트는 -2 suffix 로 구분', () => {
+    const secs = parseSections('## Notes\n\na\n\n## Notes\n\nb');
+    expect(secs.map((s) => s.id)).toEqual(['notes', 'notes-2']);
+  });
+
+  it('한글 heading slug 보존', () => {
+    expect(slugify('요구 사항')).toBe('요구-사항');
+    const secs = parseSections('## 요구사항\n\n내용');
+    expect(secs[0].id).toBe('요구사항');
+  });
+
+  it('raw HTML 은 escape 되어 실행되지 않는다', () => {
+    const secs = parseSections('## Title\n\n<script>alert(1)</script>');
+    const html = secs.map((s) => s.html).join('');
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
-  });
-
-  it('<img onerror> 는 escape 되어 실행되지 않는다', () => {
-    const blocks = parseBlocks('text <img src=x onerror=alert(1)> end');
-    const html = blocks.map((b) => b.html).join('');
-    expect(html).not.toContain('<img');
-    expect(html).toContain('&lt;img');
   });
 });
