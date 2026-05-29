@@ -59,4 +59,10 @@ AI coding agent 의 `plan.md` 산출물을 브라우저에서 **per-block 으로
 
 ## 빌드 / 테스트 / 스타일
 
-컨셉 단계 — 구현 스택·빌드·테스트 규칙은 구현 착수 시 이 섹션에 추가한다(지금 투기적으로 채우지 않음).
+- **스택**: TypeScript (ES2022), 프레임워크 없음 (vanilla-ts).
+- **빌드**: Vite. `npm run dev` (dev 서버), `npm run build` (`tsc` 타입체크 + `vite build` → `dist/`).
+- **테스트**: Vitest. `npm test` (= `vitest run`). 순수 모듈(`parse`/`export`/`notes`)은 TDD — 테스트 먼저.
+- **핵심 의존성**: `markdown-it` (`{ html:false, linkify:true }` — raw HTML 무력화, FR-010).
+- **배포**: GitHub Pages (`.github/workflows/deploy.yml`), `vite.config.ts` 의 `base: '/md2htmlreview/'`.
+- **구조**: `src/{main,parse,render,notes,export}.ts` — 코어(parse/notes/export)는 DOM 비종속 순수 모듈,
+  `render`/`main` 만 DOM·clipboard 어댑터.

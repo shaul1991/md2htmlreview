@@ -27,3 +27,6 @@ out/
 
 # Logs
 *.log
+
+# Playwright MCP 검증 산출물
+.playwright-mcp/
