@@ -24,7 +24,7 @@ describe('buildExport — 합본 텍스트, slug 식별자 (FR-107)', () => {
   it('원본 + 섹션별 의견(## [slug])을 포함한다', () => {
     const secs = parseSections(SRC);
     const out = buildExport(SRC, secs, noteMap({
-      goals: [{ id: 'n1', text: '목표가 모호함', kind: 'note' }],
+      goals: [{ id: 'n1', text: '목표가 모호함', kind: 'note', ts: 0 }],
     }));
     expect(out).toContain('# 원본 plan');
     expect(out).toContain(SRC);
@@ -36,7 +36,7 @@ describe('buildExport — 합본 텍스트, slug 식별자 (FR-107)', () => {
   it('의견 없는 섹션은 생략한다', () => {
     const secs = parseSections(SRC);
     const out = buildExport(SRC, secs, noteMap({
-      risks: [{ id: 'n1', text: '리스크 의견', kind: 'note' }],
+      risks: [{ id: 'n1', text: '리스크 의견', kind: 'note', ts: 0 }],
     }));
     expect(out).toContain('## [risks]');
     expect(out).not.toContain('## [goals]');
@@ -47,8 +47,8 @@ describe('buildExport — 합본 텍스트, slug 식별자 (FR-107)', () => {
     const secs = parseSections(SRC);
     const out = buildExport(SRC, secs, noteMap({
       goals: [
-        { id: 'n1', text: '원 의견', kind: 'note' },
-        { id: 'n2', text: '반박합니다', kind: 'rebuttal', targetNoteId: 'n1' },
+        { id: 'n1', text: '원 의견', kind: 'note', ts: 0 },
+        { id: 'n2', text: '반박합니다', kind: 'rebuttal', targetNoteId: 'n1', ts: 0 },
       ],
     }));
     expect(out).toContain('원 의견');

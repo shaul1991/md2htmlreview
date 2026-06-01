@@ -4,6 +4,7 @@ import MarkdownIt from 'markdown-it';
 export interface Section {
   id: string; // heading slug (FR-102). heading 없는 선두 평문은 "intro" (FR-103)
   headingLevel: number; // 1..6, heading 없는 intro 는 0
+  title: string; // 카드 헤더 표시용 (003). heading 텍스트 / intro 는 첫 줄
   raw: string; // 원본 슬라이스 (export 용)
   html: string; // 사람이 읽기 좋은 HTML (FR-002). md.render → html:false 로 escape (FR-108)
 }
@@ -86,7 +87,10 @@ export function parseSections(src: string): Section[] {
     const raw = lines.slice(start, end).join('\n').trim();
     if (!raw) continue;
     const { id, level } = assignId(raw);
-    sections.push({ id, headingLevel: level, raw, html: md.render(raw) });
+    const firstLine = raw.split('\n')[0] ?? '';
+    const hm = HEADING_RE.exec(firstLine);
+    const title = hm ? hm[2].trim() : firstLine.trim() || '도입';
+    sections.push({ id, headingLevel: level, title, raw, html: md.render(raw) });
   }
 
   return sections;

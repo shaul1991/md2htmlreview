@@ -20,10 +20,19 @@ describe('NoteStore — 메모리 의견 저장소 (FR-006, D-3)', () => {
     expect(store.get('p1').map((n) => n.text)).toEqual(['first', 'second']);
   });
 
-  it('기존 의견 텍스트를 수정(교체)할 수 있다 (FR-006)', () => {
-    const note = store.add('p1', 'original');
-    store.edit(note.id, 'edited');
-    expect(store.get('p1')[0].text).toBe('edited');
+  it('add / rebut 은 생성 시각 ts 를 부여한다 (003)', () => {
+    const note = store.add('p1', 'x');
+    expect(typeof note.ts).toBe('number');
+    const reb = store.rebut('p1', note.id, 'y');
+    expect(typeof reb.ts).toBe('number');
+  });
+
+  it('delete 는 노트와 그 노트를 대상으로 한 반박을 함께 제거한다 (003)', () => {
+    const a = store.add('p1', 'a');
+    const b = store.add('p1', 'b');
+    store.rebut('p1', a.id, 'reb to a');
+    store.delete(a.id);
+    expect(store.get('p1').map((n) => n.id)).toEqual([b.id]);
   });
 
   it('반박 의견은 kind:rebuttal 과 targetNoteId 로 대상을 식별한다 (FR-006)', () => {
@@ -70,5 +79,12 @@ describe('NoteStore — 메모리 의견 저장소 (FR-006, D-3)', () => {
     const ids = restored.get('s1').map((n) => n.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain(added.id);
+  });
+
+  it('loadFrom 은 ts 를 보존한다 (003)', () => {
+    const n = store.add('s1', 'a');
+    const restored = new NoteStore();
+    restored.loadFrom(store.toJSON());
+    expect(restored.get('s1')[0].ts).toBe(n.ts);
   });
 });

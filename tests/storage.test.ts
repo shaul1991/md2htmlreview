@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { loadState, saveDoc, removeDoc, setActive, getActive, listDocs, type StoredDoc } from '../src/storage';
+import type { Note } from '../src/notes';
 
 // node 환경에 localStorage 없음 → 메모리 mock
 class MemStorage {
@@ -56,5 +57,14 @@ describe('storage — localStorage 다중 문서 (FR-104/105)', () => {
     // 같은 localStorage 인스턴스 = 디스크 유지 상태. 새 호출이 읽어옴.
     expect(loadState().docs).toHaveLength(1);
     expect(loadState().activeId).toBe('a');
+  });
+
+  it('Note 의 ts 가 저장/복원에서 보존된다 (003)', () => {
+    const notes: Record<string, Note[]> = {
+      s1: [{ id: 'n1', text: 'a', kind: 'note', ts: 1717200000000 }],
+    };
+    saveDoc({ ...doc('a', 100), notes });
+    const restored = listDocs().find((d) => d.id === 'a')!;
+    expect(restored.notes.s1[0].ts).toBe(1717200000000);
   });
 });

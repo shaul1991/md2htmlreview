@@ -78,3 +78,21 @@ describe('parseSections — slug 충돌 / 한글 / raw HTML (FR-102/108)', () =>
     expect(html).toContain('&lt;script&gt;');
   });
 });
+
+describe('parseSections — title (003 섹션 카드 헤더용)', () => {
+  it('heading 섹션의 title 은 heading 텍스트', () => {
+    const secs = parseSections(FOLD);
+    expect(secs.map((s) => s.title)).toEqual(['Doc Title', 'Section A', 'Section B']);
+  });
+
+  it('intro 섹션의 title 은 첫 비어있지 않은 줄', () => {
+    const secs = parseSections('plain intro line.\n\n## Only Section\n\nbody.');
+    expect(secs[0].id).toBe('intro');
+    expect(secs[0].title).toBe('plain intro line.');
+  });
+
+  it('모든 섹션 title 은 비어있지 않다', () => {
+    const secs = parseSections('그냥 평문\n\n두 번째 줄.');
+    expect(secs[0].title.length).toBeGreaterThan(0);
+  });
+});

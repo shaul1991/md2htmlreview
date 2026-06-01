@@ -6,6 +6,7 @@ export interface Note {
   text: string;
   kind: NoteKind;
   targetNoteId?: string; // rebuttal 일 때 대상 note (FR-006)
+  ts: number; // 생성 시각(ms) (003) — 표시·정렬용
 }
 
 /**
@@ -19,7 +20,7 @@ export class NoteStore {
 
   /** 단락에 새 의견 추가 (kind:note). */
   add(blockId: string, text: string): Note {
-    return this.push(blockId, { id: this.nextId(), text, kind: 'note' });
+    return this.push(blockId, { id: this.nextId(), text, kind: 'note', ts: Date.now() });
   }
 
   /** 같은 단락의 기존 의견을 대상으로 반박 추가 (kind:rebuttal). */
@@ -29,16 +30,19 @@ export class NoteStore {
       text,
       kind: 'rebuttal',
       targetNoteId,
+      ts: Date.now(),
     });
   }
 
-  /** 기존 의견 텍스트 교체 (FR-006). 없으면 undefined. */
-  edit(noteId: string, text: string): Note | undefined {
+  /** 의견 삭제 (003). 해당 노트 + 그 노트를 대상으로 한 반박을 함께 제거. */
+  delete(noteId: string): void {
     const blockId = this.blockOf.get(noteId);
-    if (!blockId) return undefined;
-    const note = this.byBlock.get(blockId)!.find((n) => n.id === noteId);
-    if (note) note.text = text;
-    return note;
+    if (!blockId) return;
+    const list = this.byBlock.get(blockId);
+    if (!list) return;
+    const kept = list.filter((n) => n.id !== noteId && n.targetNoteId !== noteId);
+    for (const n of list) if (!kept.includes(n)) this.blockOf.delete(n.id);
+    this.byBlock.set(blockId, kept);
   }
 
   /** 단락의 의견 목록 (없으면 []). */
