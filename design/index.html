@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>md2htmlreview — 디자인 시스템 & 리디자인</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="components.css" />
+  <link rel="stylesheet" href="pages.css" />
+  <link rel="stylesheet" href="mobile.css" />
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    #root { height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="lib.js"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="ui.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+  <script type="text/babel" src="mobile.jsx"></script>
+  <script type="text/babel" src="browser-window.jsx"></script>
+  <script type="text/babel" src="layouts.jsx"></script>
+  <script type="text/babel" src="designsystem.jsx"></script>
+  <script type="text/babel" src="flows.jsx"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "theme": "dark",
+      "accent": "#0f8473",
+      "density": "comfortable",
+      "fontmode": "system",
+      "layout": "three"
+    }/*EDITMODE-END*/;
+
+    function Root() {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+      const [tab, setTab] = useState("app");
+
+      // apply tweaks to <html>
+      const ACCENT_MAP = {
+        "#0f8473": "", "#4f46e5": "indigo", "#b45309": "amber",
+        "#be185d": "rose", "#0969da": "blue"
+      };
+      useEffect(() => {
+        const r = document.documentElement;
+        r.setAttribute("data-theme", t.theme);
+        const accName = ACCENT_MAP[t.accent] ?? "";
+        if (accName) r.setAttribute("data-accent", accName); else r.removeAttribute("data-accent");
+        r.setAttribute("data-density", t.density);
+        if (t.fontmode === "mono") r.setAttribute("data-fontmode", "mono"); else r.removeAttribute("data-fontmode");
+      }, [t.theme, t.accent, t.density, t.fontmode]);
+
+      return (
+        <div className="app">
+          <header className="topbar">
+            <div className="topbar__brand">
+              <span className="topbar__logo">md</span>
+              <span>md2htmlreview</span>
+              <span className="muted">· plan 리뷰 레이어</span>
+            </div>
+            <span className="topbar__spacer" />
+            <nav className="tabnav">
+              <button className={`tabnav__item ${tab === "app" ? "is-active" : ""}`} onClick={() => setTab("app")}>프로토타입</button>
+              <button className={`tabnav__item ${tab === "layouts" ? "is-active" : ""}`} onClick={() => setTab("layouts")}>레이아웃</button>
+              <button className={`tabnav__item ${tab === "ds" ? "is-active" : ""}`} onClick={() => setTab("ds")}>디자인 시스템</button>
+              <button className={`tabnav__item ${tab === "flows" ? "is-active" : ""}`} onClick={() => setTab("flows")}>신규 플로우</button>
+            </nav>
+            <span style={{ width: 12 }} />
+            <IconButton icon={t.theme === "dark" ? "sun" : "moon"} label="테마 전환"
+              onClick={() => setTweak("theme", t.theme === "dark" ? "light" : "dark")} />
+          </header>
+
+          {tab === "app" && <ReviewApp layout={t.layout} onboarding={true} key={t.layout} />}
+          {tab === "layouts" && <Layouts />}
+          {tab === "ds" && <DesignSystem />}
+          {tab === "flows" && <Flows />}
+
+          <TweaksPanel>
+            <TweakSection label="레이아웃" />
+            <TweakRadio label="작업 공간" value={t.layout}
+              options={[{value:"three",label:"3단"},{value:"split",label:"분할"},{value:"single",label:"단일"}]}
+              onChange={(v) => setTweak("layout", v)} />
+            <TweakRadio label="밀도" value={t.density}
+              options={[{value:"compact",label:"compact"},{value:"comfortable",label:"comfort"},{value:"spacious",label:"넓게"}]}
+              onChange={(v) => setTweak("density", v)} />
+            <TweakSection label="테마" />
+            <TweakRadio label="모드" value={t.theme}
+              options={[{value:"light",label:"라이트"},{value:"dark",label:"다크"}]}
+              onChange={(v) => setTweak("theme", v)} />
+            <TweakColor label="악센트" value={t.accent}
+              options={["#0f8473","#4f46e5","#b45309","#be185d","#0969da"]}
+              onChange={(v) => setTweak("accent", v)} />
+            <TweakSection label="타이포그래피" />
+            <TweakRadio label="폰트" value={t.fontmode}
+              options={[{value:"system",label:"시스템"},{value:"mono",label:"mono"}]}
+              onChange={(v) => setTweak("fontmode", v)} />
+          </TweaksPanel>
+        </div>
+      );
+    }
+
+    class ErrBoundary extends React.Component {
+      constructor(p){ super(p); this.state={err:null}; }
+      static getDerivedStateFromError(err){ return {err}; }
+      render(){ return this.state.err
+        ? <pre style={{padding:20,color:"red",whiteSpace:"pre-wrap",fontSize:12}}>{this.state.err.stack||this.state.err.message}</pre>
+        : this.props.children; }
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<ErrBoundary><Root /></ErrBoundary>);
+  </script>
+</body>
+</html>
