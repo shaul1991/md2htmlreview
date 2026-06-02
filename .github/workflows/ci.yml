@@ -1,0 +1,33 @@
+name: CI
+
+# 머지 게이트: main 대상 PR / push 에서 테스트·타입체크·빌드를 자동 실행한다.
+# 비범위: Playwright E2E, deploy.yml(배포)은 건드리지 않는다. (MYHA-6 spec 2·3절)
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 최소 권한: 게이트는 읽기만 필요하다. (spec 5절)
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # 로컬 빌드/lockfile 작성 버전과 일치. (spec 5절)
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # 3개 체크를 명시적 단계로 분리 → Actions UI 에서 어디가 깨졌는지 한눈에. (spec 6절 설계 메모)
+      - name: Test
+        run: npm test
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Build
+        # base:'/md2htmlreview/' 는 vite.config.ts 에서 유지된다.
+        run: npx vite build
