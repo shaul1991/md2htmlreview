@@ -14,6 +14,8 @@ const mount = document.querySelector<HTMLElement>('#app')!;
 const store = new NoteStore();
 let sections: Section[] = [];
 let currentDoc: StoredDoc | null = null;
+// 서버 리뷰 세션(?review=) 모드면 그 reviewId, 아니면 null (004 US2 — 기존 부팅에 가산).
+let reviewSessionId: string | null = null;
 
 // UI 휘발 상태 (research D-2). 작성기/붙여넣기 입력값은 여기 두지 않고 제출 시 DOM 에서 읽음 (D-1).
 interface AppState {
@@ -54,6 +56,7 @@ function render(): void {
     selectedSectionId: state.selectedSectionId,
     collapsed: state.collapsed,
     replyTo: state.replyTo,
+    reviewSession: reviewSessionId != null,
   });
 }
 
@@ -65,6 +68,8 @@ function focusComposer(): void {
 // 의견 변경 시 활성 문서에 동기화 + 영속 (FR-012).
 function persist(): void {
   if (!currentDoc) return;
+  // 서버 세션 모드: 의견은 NoteStore 메모리에만 두고 "검수 완료" 시 서버로 POST. localStorage 영속 생략.
+  if (reviewSessionId) return;
   currentDoc.notes = store.toJSON();
   currentDoc.updatedAt = Date.now();
   saveDoc(currentDoc);
@@ -166,6 +171,47 @@ async function copyHandoff(): Promise<void> {
   }
 }
 
+// 004 US2 — 에이전트가 제출한 리뷰 세션을 붙여넣기 없이 로드 (FR-005). 서버 세션 기준이라
+// localStorage 영속·이력은 생략하고 기존 검수 워크스페이스(섹션 카드)에 그대로 태운다 (FR-006).
+async function enterReviewSession(id: string): Promise<void> {
+  try {
+    const res = await fetch(`/api/reviews/${id}`);
+    if (!res.ok) {
+      state.mode = 'empty';
+      render();
+      return;
+    }
+    const data = (await res.json()) as { source: string };
+    reviewSessionId = id;
+    const now = Date.now();
+    currentDoc = { id: `review-${id}`, title: titleOf(data.source), source: data.source, notes: {}, createdAt: now, updatedAt: now };
+    sections = parseSections(data.source);
+    store.clear();
+    state.mode = 'review';
+    state.selectedSectionId = sections[0]?.id ?? null;
+    state.collapsed.clear();
+    state.replyTo = null;
+  } catch {
+    state.mode = 'empty';
+  }
+  render();
+}
+
+// 004 US2 — "검수 완료" → 섹션별 결정을 로컬 서버 세션에 기록 (FR-007). 기존 클립보드 핸드오프와 병존(FR-013).
+async function submitDecision(): Promise<void> {
+  if (!reviewSessionId) return;
+  try {
+    const res = await fetch(`/api/reviews/${reviewSessionId}/decision`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ notes: store.toJSON() }),
+    });
+    toast(res.ok ? '검수 완료 — 에이전트가 회수할 수 있습니다' : '검수 제출 실패');
+  } catch {
+    toast('검수 제출 실패 — 로컬 서버 연결을 확인하세요');
+  }
+}
+
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 function toast(msg: string): void {
   document.querySelector('.toast')?.remove();
@@ -212,6 +258,9 @@ mount.addEventListener('click', (e) => {
       }
       case 'handoff':
         void copyHandoff();
+        break;
+      case 'submit-decision':
+        void submitDecision();
         break;
       case 'del-doc': {
         const id = actEl.closest<HTMLElement>('.hist-item')?.dataset.docId ?? d.docId;
@@ -287,7 +336,13 @@ mount.addEventListener('keydown', (e) => {
 applyTheme();
 window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
 
-const active = getActive();
-if (active) enterReview(active);
-else state.mode = 'empty';
-render();
+// 004 US2 — getActive(localStorage) 보다 먼저 ?review= 를 본다. 쿼리 없으면 현행 부팅 그대로(FR-013 무회귀).
+const reviewParam = new URLSearchParams(location.search).get('review');
+if (reviewParam) {
+  void enterReviewSession(reviewParam);
+} else {
+  const active = getActive();
+  if (active) enterReview(active);
+  else state.mode = 'empty';
+  render();
+}

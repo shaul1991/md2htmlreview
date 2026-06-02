@@ -19,6 +19,7 @@ export interface View {
   selectedSectionId: string | null;
   collapsed: Set<string>;
   replyTo: { sectionId: string; noteId: string } | null;
+  reviewSession?: boolean; // 004 — 서버 리뷰 세션(?review=) 모드면 "검수 완료" 액션 노출
 }
 
 type Attrs = {
@@ -123,9 +124,16 @@ function centerPane(view: View): HTMLElement {
     title.style.cssText =
       'text-transform:none;font-size:var(--t-13);color:var(--fg);font-weight:var(--fw-semibold);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
     const badge = h('span', { class: 'badge', text: `${view.sections.length} 섹션` });
-    const handoff = h('button', { class: 'btn btn--primary btn--sm', type: 'button', data: { act: 'handoff' } });
+    head.append(createIcon('doc', 15), title, badge);
+    // 004 US2 — 서버 세션 모드면 "검수 완료"가 주 CTA, 클립보드 핸드오프는 폴백으로 병존(FR-013).
+    if (view.reviewSession) {
+      const done = h('button', { class: 'btn btn--primary btn--sm', type: 'button', data: { act: 'submit-decision' } });
+      done.append(createIcon('check', 14), h('span', { text: '검수 완료' }));
+      head.append(done);
+    }
+    const handoff = h('button', { class: `btn ${view.reviewSession ? '' : 'btn--primary'} btn--sm`.replace('  ', ' '), type: 'button', data: { act: 'handoff' } });
     handoff.append(createIcon('handoff', 14), h('span', { text: '핸드오프 복사' }));
-    head.append(createIcon('doc', 15), title, badge, handoff);
+    head.append(handoff);
   } else {
     head.append(createIcon('doc', 15), h('span', { class: 'pane__title', text: 'plan 입력' }));
   }
