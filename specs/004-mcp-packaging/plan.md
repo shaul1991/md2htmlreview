@@ -105,7 +105,7 @@ buildExport(session.source, parseSections(session.source), new Map(Object.entrie
 ```
 
 - **왜 서버에서**: US1 독립 검증(브라우저 없이 `submit_plan` → 로컬 API 에 결정 직접 POST → `get_review` 확인)이 성립하려면 회수 텍스트 생성이 서버 측에서 일어나야 한다. 브라우저가 완성 문자열을 보내면 그 경로를 브라우저 없이 검증할 수 없다.
-- **SC-002 문자열 일치 보장**: 클립보드 핸드오프(`main.ts copyHandoff`)도 `buildExport(currentDoc.source, parseSections(source), store.toMap())` 를 호출한다. 서버도 동일 `source`·동일 의견 맵으로 **같은 순수 함수**를 부른다. `parseSections` 는 결정적이고, `Object.entries`/배열은 삽입 순서를 보존하므로 출력은 바이트 단위로 동일하다. `buildExport` 는 `note.id/kind/targetNoteId/text` 만 쓰고 `ts` 는 안 쓰므로 타임스탬프 차이도 영향 없다. → 형식 SSoT 단일.
+- **SC-002 문자열 일치 보장**: 클립보드 핸드오프(`main.ts copyHandoff`)도 `buildExport(currentDoc.source, sections, store.toMap())` 를 호출한다(여기서 `sections` 는 `enterReview` 가 캐시한 `parseSections(currentDoc.source)` 라서 `sections === parseSections(currentDoc.source)`). 서버도 동일 `source`·동일 의견 맵으로 **같은 순수 함수**를 부른다. `parseSections` 는 결정적이고, `Object.entries`/배열은 삽입 순서를 보존하므로 출력은 바이트 단위로 동일하다. `buildExport` 는 `note.id/kind/targetNoteId/text` 만 쓰고 `ts` 는 안 쓰므로 타임스탬프 차이도 영향 없다. → 형식 SSoT 단일.
 
 ### 3. 브라우저는 `?review=` 로 붙여넣기 없이 로드한다 (FR-005)
 
