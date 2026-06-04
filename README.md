@@ -159,7 +159,7 @@ handoff produces.
 - **In-memory sessions** — submitted plans and decisions live only in the
   server process (FR-012); nothing is persisted and nothing leaves the machine.
   They vanish when the process exits.
-- **Raw HTML neutralized** (FR-010) — Markdown is parsed with `html: false`, so
+- **Raw HTML neutralized** (FR-011) — Markdown is parsed with `html: false`, so
   a submitted plan can't inject markup into the review page.
 - **Port** — default `7391`; if it is taken, the server binds an OS-assigned
   port instead. Use the `url` from `submit_plan` (or the stderr log) for the
