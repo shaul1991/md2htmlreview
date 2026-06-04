@@ -86,16 +86,17 @@ function enterReview(doc: StoredDoc): void {
   state.replyTo = null;
 }
 
-// 변환: 새 문서 생성 + 의견 초기화 + 저장 (FR-004).
-function convert(text: string): void {
+// 변환: 새 문서 생성 + 의견 초기화 + 저장 (FR-004). 0섹션이면 false (005 — 파일 열기 피드백용).
+function convert(text: string): boolean {
   const parsed = parseSections(text);
-  if (parsed.length === 0) return;
+  if (parsed.length === 0) return false;
   store.clear();
   const now = Date.now();
   const doc: StoredDoc = { id: genId(), title: titleOf(text), source: text, notes: {}, createdAt: now, updatedAt: now };
   saveDoc(doc);
   enterReview(doc);
   render();
+  return true;
 }
 
 // 이력에서 문서 로드 (FR-013).
@@ -256,6 +257,9 @@ mount.addEventListener('click', (e) => {
         }
         break;
       }
+      case 'open-file':
+        mount.querySelector<HTMLInputElement>('[data-role="file-input"]')?.click();
+        break;
       case 'handoff':
         void copyHandoff();
         break;
@@ -319,6 +323,19 @@ mount.addEventListener('click', (e) => {
     state.selectedSectionId = card.dataset.sectionId;
     render();
   }
+});
+
+// 005 — 로컬 .md 파일 선택 → UTF-8 텍스트 → 기존 convert 재사용 (붙여넣기와 동일 경로).
+mount.addEventListener('change', (e) => {
+  const input = e.target as HTMLInputElement;
+  if (!input.matches?.('[data-role="file-input"]') || !input.files?.[0]) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = String(reader.result ?? '');
+    if (!convert(text)) toast('마크다운 섹션을 찾지 못했습니다');
+  };
+  reader.readAsText(input.files[0], 'utf-8');
+  input.value = ''; // 같은 파일 재선택 가능하게
 });
 
 // ⌘/Ctrl+Enter 로 작성기 제출
