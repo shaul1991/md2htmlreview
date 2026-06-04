@@ -69,7 +69,11 @@ export function renderApp(mount: HTMLElement, view: View): void {
   mount.innerHTML = '';
   const ws = h('div', { class: 'workspace workspace--three' });
   ws.append(historyPane(view), centerPane(view), notesPane(view));
-  mount.append(ws);
+  // 005 — 로컬 .md 파일 열기용 숨김 input. open-file 액션이 click() 트리거 (main.ts).
+  const fileInput = h('input', { type: 'file', data: { role: 'file-input' } }) as HTMLInputElement;
+  fileInput.accept = '.md,.markdown,text/markdown,text/plain';
+  fileInput.hidden = true;
+  mount.append(ws, fileInput);
 }
 
 /* ---------------- 이력 pane ---------------- */
@@ -180,7 +184,9 @@ function emptyHero(): HTMLElement {
   const sampleBtn = h('button', { class: 'btn btn--primary btn--lg', type: 'button', data: { act: 'start-sample' } });
   sampleBtn.append(createIcon('plus', 16), h('span', { text: '샘플 plan 으로 시작' }));
   const blankBtn = h('button', { class: 'btn btn--lg', type: 'button', data: { act: 'start-blank' }, text: '빈 화면에서 시작' });
-  row.append(sampleBtn, blankBtn);
+  const openBtn = h('button', { class: 'btn btn--ghost btn--lg', type: 'button', data: { act: 'open-file' } });
+  openBtn.append(createIcon('doc', 16), h('span', { text: '파일 열기' }));
+  row.append(sampleBtn, blankBtn, openBtn);
   hero.append(row);
   return hero;
 }
@@ -197,9 +203,11 @@ function pasteWrap(): HTMLElement {
   const convertBtn = h('button', { class: 'btn btn--primary btn--md', type: 'button', data: { act: 'convert' } });
   convertBtn.append(createIcon('arrowRight', 16), h('span', { text: '변환' }));
   const fillBtn = h('button', { class: 'btn btn--ghost btn--md', type: 'button', data: { act: 'fill-sample' }, text: '샘플 채우기' });
+  const openBtn = h('button', { class: 'btn btn--ghost btn--md', type: 'button', data: { act: 'open-file' } });
+  openBtn.append(createIcon('doc', 16), h('span', { text: '파일 열기' }));
   const note = h('span', { class: 'subtle', text: 'local-first · 서버 전송 없음' });
   note.style.fontSize = 'var(--t-12)';
-  bar.append(convertBtn, fillBtn, h('span', { class: 'spacer' }), note);
+  bar.append(convertBtn, fillBtn, openBtn, h('span', { class: 'spacer' }), note);
 
   wrap.append(ta, bar);
   return wrap;
