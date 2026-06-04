@@ -104,6 +104,19 @@ host launches the process:
 }
 ```
 
+Same config, registered once at **user / global scope** so every project can
+reach it — e.g. with the Claude Code CLI instead of hand-writing the file:
+
+```sh
+claude mcp add-json md2htmlreview -s user '{
+  "command": "sh",
+  "args": ["-c", "cd /ABSOLUTE/PATH/TO/md2htmlreview && exec node dist-server/server/index.js"]
+}'
+```
+
+The absolute-path form is what makes this safe regardless of which project the
+host launches from.
+
 On startup the server logs the review UI address to **stderr** (stdout is
 reserved for MCP JSON-RPC):
 
